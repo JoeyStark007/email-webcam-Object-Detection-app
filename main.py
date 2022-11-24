@@ -3,6 +3,7 @@ import time
 from emailing import send_email
 import glob
 import os
+from threading import Thread
 
 video = cv2.VideoCapture(0)
 time.sleep(1)
@@ -33,7 +34,7 @@ while True:
     contours, check = cv2.findContours(dil_frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     for contour in contours:
-        if cv2.contourArea(contour) < 50000:
+        if cv2.contourArea(contour) < 10000:
             continue
         x, y, w, h = cv2.boundingRect(contour)
         rectangle = cv2.rectangle(frame, (x,y),(x+w, y+h),(0,255,0))
@@ -48,11 +49,21 @@ while True:
     status_list = status_list[-2:]
 
     if status_list[0] == 1 and status_list[1] == 0:
-        send_email(img_with_object)
-        clean_folder()
+        email_thread = Thread(target=send_email, args=(img_with_object,))
+        email_thread.daemon = True
+        clean_thread = Thread(target=clean_folder)
+        clean_thread.daemon = True
+
+        email_thread.start()
+        clean_thread.start()
+
+
     cv2.imshow("Video", frame)
     key = cv2.waitKey(1)
 
+
     if key == ord("q"):
         break
+
 video.release()
+
